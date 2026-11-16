@@ -45,6 +45,14 @@ NAT_SHIFT_1B = 1.0
 _ADJ_1B = {"GA": 0.73, "OH*": 0.43, "NC": 0.63}
 RACES_1B = [(a, b, _ADJ_1B.get(a, p), c) for a, b, p, c in RACES]
 
+# ---- 第1轮修订版（1c）：补充选民结构 ----
+# 中期选举投票人群更偏高投票倾向（年长、高学历），2016 年后高学历选民偏民主党；
+# 特朗普 2024 年的增量来自低投票倾向的年轻人、拉美裔、非大学男性（E22、E23）；
+# 2025 年新泽西、弗吉尼亚出口民调显示拉美裔、年轻选民回摆民主党（E24）。
+# 全国层面的效应已经体现在特别选举数据里（E13），这里只做州际相对调整，避免重复计算。
+_ADJ_1C = {"TX": 0.26, "OH*": 0.45, "NC": 0.64, "MI": 0.56, "NH": 0.76}
+RACES_1C = [(a, b, _ADJ_1C.get(a, p), c) for a, b, p, c in RACES_1B]
+
 def simulate(races, sigma_nat=SIGMA_NAT, sigma_state=SIGMA_STATE, seed=2026, nat_shift=0.0):
     rng = np.random.default_rng(seed)
     total = (sigma_nat**2 + sigma_state**2) ** 0.5
@@ -64,9 +72,10 @@ def report(label, d, i, r):
     print(f"民主党席位中位数 {np.median(d):.0f}，80% 区间 {np.percentile(d,10):.0f}–{np.percentile(d,90):.0f}")
 
 if __name__ == "__main__":
+    report("第1轮修订版 1c（再加选民结构）", *simulate(RACES_1C, nat_shift=NAT_SHIFT_1B))
     report("第1轮修订版 1b（含非民调证据）", *simulate(RACES_1B, nat_shift=NAT_SHIFT_1B))
     for ns in (0.0, 2.0):
-        d_, i_, r_ = simulate(RACES_1B, nat_shift=ns)
+        d_, i_, r_ = simulate(RACES_1C, nat_shift=ns)
         print(f"  敏感性：全国平移 {ns} 分 → 民主党过半 {np.mean(d_>=51):.1%}")
     print()
     d, i, r = simulate(RACES)
