@@ -53,6 +53,12 @@ RACES_1B = [(a, b, _ADJ_1B.get(a, p), c) for a, b, p, c in RACES]
 _ADJ_1C = {"TX": 0.26, "OH*": 0.45, "NC": 0.64, "MI": 0.56, "NH": 0.76}
 RACES_1C = [(a, b, _ADJ_1C.get(a, p), c) for a, b, p, c in RACES_1B]
 
+# ---- 第1轮修订版（1d）：逐个核查"安全"席位，补长尾 ----
+# SC：Graham 被 MAGA 派初选挑战（Dans、Lynch），两党基本盘对他都不满；民主党 Andrews 是可信的候选人（E26）
+# KS：民主党州长 Kelly 两次全州胜选，2022 年堕胎公投 59–41；但截至 2 月民主党没有重量级候选人（E27）
+_ADJ_1D = {"SC": 0.06, "KS": 0.06}
+RACES_1D = [(a, b, _ADJ_1D.get(a, p), c) for a, b, p, c in RACES_1C]
+
 def simulate(races, sigma_nat=SIGMA_NAT, sigma_state=SIGMA_STATE, seed=2026, nat_shift=0.0):
     rng = np.random.default_rng(seed)
     total = (sigma_nat**2 + sigma_state**2) ** 0.5
@@ -72,10 +78,11 @@ def report(label, d, i, r):
     print(f"民主党席位中位数 {np.median(d):.0f}，80% 区间 {np.percentile(d,10):.0f}–{np.percentile(d,90):.0f}")
 
 if __name__ == "__main__":
+    report("第1轮修订版 1d（逐个核查安全席位）", *simulate(RACES_1D, nat_shift=NAT_SHIFT_1B))
     report("第1轮修订版 1c（再加选民结构）", *simulate(RACES_1C, nat_shift=NAT_SHIFT_1B))
     report("第1轮修订版 1b（含非民调证据）", *simulate(RACES_1B, nat_shift=NAT_SHIFT_1B))
     for ns in (0.0, 2.0):
-        d_, i_, r_ = simulate(RACES_1C, nat_shift=ns)
+        d_, i_, r_ = simulate(RACES_1D, nat_shift=ns)
         print(f"  敏感性：全国平移 {ns} 分 → 民主党过半 {np.mean(d_>=51):.1%}")
     print()
     d, i, r = simulate(RACES)
