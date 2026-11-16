@@ -37,11 +37,19 @@ RACES = [
 ]
 assert len(RACES) == 35
 
-def simulate(races, sigma_nat=SIGMA_NAT, sigma_state=SIGMA_STATE, seed=2026):
+# ---- 第1轮修订版（1b）：补充非民调证据后 ----
+# 特别选举民主党平均超额 ~13 分（E13）> 通用选票 D+4~5 → 全国均值向民主党平移 1 分
+# 资金：Ossoff 2500 万现金（E15）、S. Brown 第四季度 730 万（E15）、Cooper 1240 万（E15）
+# 抵消：RNC 9500 万现金无债 vs DNC 1400 万现金、1700 万债务（E16）；北卡共和党登记数反超（E18）
+NAT_SHIFT_1B = 1.0
+_ADJ_1B = {"GA": 0.73, "OH*": 0.43, "NC": 0.63}
+RACES_1B = [(a, b, _ADJ_1B.get(a, p), c) for a, b, p, c in RACES]
+
+def simulate(races, sigma_nat=SIGMA_NAT, sigma_state=SIGMA_STATE, seed=2026, nat_shift=0.0):
     rng = np.random.default_rng(seed)
     total = (sigma_nat**2 + sigma_state**2) ** 0.5
     mu = np.array([_ppf(p) * total for _, _, p, _ in races])
-    nat = rng.normal(0, sigma_nat, size=(N, 1))
+    nat = rng.normal(nat_shift, sigma_nat, size=(N, 1))
     st = rng.normal(0, sigma_state, size=(N, len(races)))
     win = (mu + nat + st) > 0              # 非共和党一方获胜
     indep = np.array([i for *_, i in races])
@@ -50,8 +58,19 @@ def simulate(races, sigma_nat=SIGMA_NAT, sigma_state=SIGMA_STATE, seed=2026):
     r = 100 - d - i
     return d, i, r
 
+def report(label, d, i, r):
+    print(f"== {label} ==")
+    print(f"共和党保住多数（≥50 席）: {np.mean(r >= 50):.1%} | 民主党过半（≥51）: {np.mean(d >= 51):.1%} | 奥斯本决定: {np.mean((r < 50) & (d < 51)):.1%}")
+    print(f"民主党席位中位数 {np.median(d):.0f}，80% 区间 {np.percentile(d,10):.0f}–{np.percentile(d,90):.0f}")
+
 if __name__ == "__main__":
+    report("第1轮修订版 1b（含非民调证据）", *simulate(RACES_1B, nat_shift=NAT_SHIFT_1B))
+    for ns in (0.0, 2.0):
+        d_, i_, r_ = simulate(RACES_1B, nat_shift=ns)
+        print(f"  敏感性：全国平移 {ns} 分 → 民主党过半 {np.mean(d_>=51):.1%}")
+    print()
     d, i, r = simulate(RACES)
+    print("== 第1轮原版 1a（仅民调与评级） ==")
     print(f"共和党保住多数（≥50 席，副总统万斯打破平局）: {np.mean(r >= 50):.1%}")
     print(f"民主党拿下多数（≥51 席）:                    {np.mean(d >= 51):.1%}")
     print(f"无党过半（奥斯本决定归属）:                  {np.mean((r < 50) & (d < 51)):.1%}")
